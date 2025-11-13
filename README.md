@@ -1,4 +1,4 @@
-# 🕵️ AutoReconX - Lourencobrah Edition
+# 🕵️ AutoReconX
 
 > Reconhecimento automático de alvos para análise de superfície de ataque, focado em testes de segurança ofensiva.
 
@@ -69,7 +69,7 @@ E por fim, informe o domínio no formato: exemplo.com.br (sem http:// ou https:/
 
 ## 🧠 Autor
 
-Desenvolvido com 💻 e ☕ por Guilherme Lourenço (a.k.a. lourencobrah)
+Desenvolvido por Guilherme Lourenço (a.k.a. lourencobrah)
 
 📫 Contato: https://www.linkedin.com/in/lourencovicente/
 
