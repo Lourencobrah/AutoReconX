@@ -1,6 +1,5 @@
 import socket
 from urllib.parse import urlparse
-from colorama import Fore, Style
 
 COMMON_PORTS = {
     21: "FTP",
@@ -27,18 +26,40 @@ def scan_port(host, port, timeout=1):
         return False
 
 def run(url):
-    print(Fore.GREEN + "\n[*] Port Scan (Basic Python Scanner)" + Style.RESET_ALL)
-
-    parsed_url = urlparse(url)
-    host = parsed_url.hostname
+    parsed = urlparse(url)
+    host = parsed.hostname
 
     if not host:
-        print(Fore.RED + "[!] Host inválido." + Style.RESET_ALL)
-        return
+        return {
+            "error": "Host inválido.",
+            "open_ports": [],
+            "closed_ports": [],
+            "all_ports": []
+        }
 
-    print(f"[+] Escaneando host: {host}")
+    results = []
+    open_list = []
+    closed_list = []
+
     for port, service in COMMON_PORTS.items():
-        if scan_port(host, port):
-            print(Fore.CYAN + f"    [OPEN] Porta {port} ({service})" + Style.RESET_ALL)
+        is_open = scan_port(host, port)
+        entry = {
+            "port": port,
+            "service": service,
+            "status": "open" if is_open else "closed"
+        }
+
+        results.append(entry)
+
+        if is_open:
+            open_list.append(entry)
         else:
-            print(Fore.LIGHTBLACK_EX + f"    [CLOSED] Porta {port} ({service})" + Style.RESET_ALL)
+            closed_list.append(entry)
+
+    return {
+        "host": host,
+        "open_ports": open_list,
+        "closed_ports": closed_list,
+        "all_ports": results,
+        "error": None
+    }

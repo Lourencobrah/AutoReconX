@@ -6,21 +6,35 @@ import tldextract
 def run(url):
     print(Fore.GREEN + "[*] Informações de DNS e IP" + Style.RESET_ALL)
 
-    try:
-        # Extrai o domínio principal da URL (sem subdomínios)
-        domain = tldextract.extract(url).registered_domain
+    result = {
+        "domain": None,
+        "ip": None,
+        "a_records": [],
+        "error": None
+    }
 
-        # Resolve o IP associado ao domínio
+    try:
+        domain = tldextract.extract(url).registered_domain
+        result["domain"] = domain
+
         ip_address = socket.gethostbyname(domain)
+        result["ip"] = ip_address
         print(f"    [>] Endereço IP: {ip_address}")
+
     except Exception as e:
         print(f"    [!] Erro ao resolver o IP: {e}")
-        return
+        result["error"] = f"IP resolution error: {e}"
+        return result
 
     try:
-        # Tenta resolver registros do tipo A (IPv4)
         ipv4_records = dns.resolver.resolve(domain, 'A')
         for record in ipv4_records:
-            print(f"    [>] Registro do tipo A (IPv4): {record}")
+            record_ip = str(record)
+            result["a_records"].append(record_ip)
+            print(f"    [>] Registro do tipo A (IPv4): {record_ip}")
+
     except Exception as e:
         print(f"    [!] Nenhum registro do tipo A encontrado: {e}")
+        result["a_records_error"] = str(e)
+
+    return result

@@ -9,8 +9,7 @@ from urllib.parse import urlparse
 def get_ip(url):
     try:
         hostname = urlparse(url).hostname
-        ip = socket.gethostbyname(hostname)
-        return ip
+        return socket.gethostbyname(hostname)
     except:
         return "Desconhecido"
 
@@ -19,15 +18,13 @@ def get_favicon_hash(url):
         favicon_url = url.rstrip('/') + '/favicon.ico'
         res = requests.get(favicon_url, timeout=5)
         if res.status_code == 200:
-            hash_value = hashlib.md5(res.content).hexdigest()
-            return hash_value
+            return hashlib.md5(res.content).hexdigest()
     except:
         return None
 
 def get_title(html):
     soup = BeautifulSoup(html, 'html.parser')
-    title = soup.title.string.strip() if soup.title else 'Sem título'
-    return title
+    return soup.title.string.strip() if soup.title else 'Sem título'
 
 def detect_plugins(headers, html, scripts, favicon_hash):
     summary = []
@@ -44,80 +41,58 @@ def detect_plugins(headers, html, scripts, favicon_hash):
     server = headers.get('Server', '').lower()
     powered = headers.get('X-Powered-By', '').lower()
 
-    # Servidores e tecnologias backend
+    # Detect frameworks e servidores
     if 'apache' in server:
         data = {'String': server}
-        versions = re.findall(r'apache/?([0-9.]+)?', server)
-        os_match = re.findall(r'\((.*?)\)', server)
-        if versions:
-            data['Version'] = versions[0]
-        if os_match:
-            data['OS'] = os_match[0]
         add_plugin('Apache', data, 'Servidor web open-source.')
-        summary.append(f"HTTPServer[{data.get('OS', 'Desconhecido')}][{server}]")
-
     if 'nginx' in server:
         add_plugin('Nginx', {'String': server}, 'Servidor web leve e de alto desempenho.')
-
     if 'express' in powered or 'express' in html:
         add_plugin('Express.js', description='Framework web para Node.js.')
-
     if 'php' in powered or '.php' in html:
         add_plugin('PHP', description='Linguagem de script amplamente usada para web.')
-
     if 'laravel' in html:
         add_plugin('Laravel', description='Framework PHP moderno e elegante.')
-
     if 'django' in powered or 'csrftoken' in headers:
         add_plugin('Django', description='Framework web de alto nível em Python.')
 
-    # CMS detection
+    # CMS
     if 'wp-content' in html or 'wordpress' in powered:
-        add_plugin('WordPress', description='Sistema de gerenciamento de conteúdo (CMS) popular.')
+        add_plugin('WordPress', description='CMS popular.')
     if 'joomla' in html:
-        add_plugin('Joomla', description='CMS gratuito e de código aberto.')
+        add_plugin('Joomla', description='CMS gratuito e open-source.')
     if 'drupal' in html:
         add_plugin('Drupal', description='CMS flexível e robusto.')
 
-    # Frameworks JavaScript
+    # JS frameworks
     if any('react' in s or '__react' in html for s in scripts):
-        add_plugin('React.js', description='Biblioteca JavaScript para interfaces de usuário.')
+        add_plugin('React.js', description='Biblioteca JavaScript para UI.')
     if any('vue' in s or 'vue.js' in html for s in scripts):
-        add_plugin('Vue.js', description='Framework progressivo para construção de interfaces.')
+        add_plugin('Vue.js', description='Framework progressivo para UI.')
     if 'angular' in html or any('angular' in s for s in scripts):
         add_plugin('Angular', description='Framework web baseado em TypeScript.')
-
-    # jQuery
     if any('jquery' in s for s in scripts):
         add_plugin('jQuery', {'Website': 'http://jquery.com/'}, 'JavaScript rápido para DOM e AJAX.')
 
-    # Analytics e rastreamento
+    # Analytics / Tracking
     if 'google-analytics' in html or 'gtag(' in html:
-        add_plugin('Google Analytics', description='Ferramenta de análise de tráfego web do Google.')
-
+        add_plugin('Google Analytics')
     if 'googletagmanager.com' in html:
-        add_plugin('Google Tag Manager', description='Gerenciador de tags do Google.')
-
+        add_plugin('Google Tag Manager')
     if 'facebook.net' in html or 'fbq(' in html:
-        add_plugin('Facebook Pixel', description='Ferramenta de rastreamento da Meta.')
+        add_plugin('Facebook Pixel')
 
-    # CDN e serviços externos
+    # CDN / Serviços externos
     if 'cloudflare' in server or 'cf-ray' in headers:
-        add_plugin('Cloudflare', description='CDN e proteção contra DDoS.')
-
+        add_plugin('Cloudflare', description='CDN e proteção DDoS.')
     if 'fonts.googleapis.com' in html:
-        add_plugin('Google Fonts', description='Serviço de fontes da Google.')
+        add_plugin('Google Fonts')
 
-    # HTML5 Doctype
+    # HTML5
     if '<!doctype html>' in html.lower():
         add_plugin('HTML5', description='HTML versão 5 detectado via doctype.')
 
-    # X-UA-Compatible
-    if 'x-ua-compatible' in headers or 'x-ua-compatible' in html:
-        value = headers.get('X-UA-Compatible', 'IE=edge')
-        add_plugin('X-UA-Compatible', {'String': value}, 'Compatibilidade com IE.')
-
-    # Favicon hash (usado por Shodan e outros)
+    # Favicon
     favicon_db = {
         'd41d8cd98f00b204e9800998ecf8427e': 'Possível favicon vazio',
         '3e1c3f44ffb34a2f3af22cbd0a4f395e': 'Painel phpMyAdmin',
@@ -129,7 +104,7 @@ def detect_plugins(headers, html, scripts, favicon_hash):
     elif favicon_hash:
         add_plugin('Favicon Hash', {'Hash': favicon_hash}, 'Hash MD5 do favicon extraído.')
 
-    # Script tag summary
+    # Scripts count
     if scripts:
         add_plugin('Script', {'Scripts detectados': len(scripts)}, 'Scripts externos encontrados.')
 
@@ -137,6 +112,14 @@ def detect_plugins(headers, html, scripts, favicon_hash):
 
 def run(url):
     print(Fore.GREEN + "\n[*] Web Tools Analyzer" + Style.RESET_ALL)
+    result = {
+        "ip": None,
+        "title": None,
+        "summary": [],
+        "plugins": [],
+        "error": None
+    }
+
     try:
         res = requests.get(url, timeout=5)
         headers = res.headers
@@ -146,9 +129,16 @@ def run(url):
         title = get_title(html)
         favicon_hash = get_favicon_hash(url)
 
-        # Resumo e plugins
         summary, plugins = detect_plugins(headers, html.lower(), scripts, favicon_hash)
 
+        result.update({
+            "ip": ip,
+            "title": title,
+            "summary": summary,
+            "plugins": plugins
+        })
+
+        # Prints mantidos
         print(Fore.YELLOW + f"    Status    : {res.status_code} {res.reason}")
         print(f"    Title     : {title}")
         print(f"    IP        : {ip}")
@@ -170,4 +160,8 @@ def run(url):
             print(f"      {k}: {v}")
 
     except requests.exceptions.RequestException as e:
-        print(Fore.RED + f"\n[!] Erro ao requisitar o site: {e}" + Style.RESET_ALL)
+        msg = f"Erro ao requisitar o site: {e}"
+        print(Fore.RED + f"\n[!] {msg}" + Style.RESET_ALL)
+        result["error"] = msg
+
+    return result
